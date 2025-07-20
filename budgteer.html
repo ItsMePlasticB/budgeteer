@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>באדג'טיר - השוואת מחירי סופרמרקטים</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background: linear-gradient(170deg, #F7F9FC 0%, #E9F1F8 100%);
+        }
+        .primary-bg { background-color: #ff6b35; }
+        .primary-text { color: #ff6b35; }
+        .secondary-text { color: #0D2F4B; }
+        .secondary-bg { background-color: #0D2F4B; }
+        .accent-bg { background-color: #63D4AD; }
+        .accent-text { color: #63D4AD; }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .soft-shadow { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
+        .btn-hover { transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-hover:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+        .category-card:hover .category-icon { transform: scale(1.15) rotate(-5deg); }
+        .category-icon { transition: transform 0.3s ease; }
+        
+        .animated-gradient-text {
+            background: linear-gradient(45deg, #ff6b35, #ffa07a, #0D2F4B);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-animation 5s ease infinite;
+        }
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .modal { display: none; }
+        .modal.flex { display: flex; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-30 shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-3xl font-extrabold primary-text">🛒 באדג'טיר</h1>
+            <nav class="hidden md:flex gap-6 items-center">
+                <a href="#" class="text-gray-700 hover:primary-text font-medium transition-colors">דף הבית</a>
+                <a href="#" id="my-lists-link" class="text-gray-700 hover:primary-text font-medium transition-colors">הרשימות שלי</a>
+                <a href="#" id="about-us-link" class="text-gray-700 hover:primary-text font-medium transition-colors">אודות</a>
+                <!-- <a href="#" id="contact-us-link" class="text-gray-700 hover:primary-text font-medium transition-colors">צור קשר</a> -->
+            </nav>
+            <div class="flex items-center gap-4">
+                <div id="auth-links" class="hidden sm:flex items-center gap-2">
+                    <button id="login-btn" class="font-medium text-gray-700 hover:primary-text transition-colors">התחברות</button>
+                    <button id="register-btn" class="primary-bg text-white font-bold py-2 px-5 rounded-full hover:bg-orange-600 transition-colors btn-hover">הרשמה</button>
+                </div>
+                 <div id="user-info" class="hidden sm:flex items-center gap-3">
+                    <span id="user-email" class="font-medium secondary-text"></span>
+                    <button id="logout-btn" class="font-medium text-gray-700 hover:primary-text transition-colors">התנתקות</button>
+                </div>
+                <button id="cart-button" class="relative">
+                    <svg class="h-8 w-8 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                    <span id="cart-count" class="absolute -top-2 -left-2 primary-bg text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 sm:px-6 lg:px-8 py-12">
+        <section class="text-center bg-white/50 backdrop-blur-sm p-10 rounded-2xl soft-shadow mb-16 item-enter">
+            <h2 class="text-4xl md:text-5xl font-extrabold secondary-text mb-3 animated-gradient-text">מצא את סל הקניות המשתלם ביותר</h2>
+            <p class="text-gray-600 mb-8 text-lg">גלה את הסל הזול ביותר בסופרמרקטים הקרובים אליך.</p>
+            <div class="max-w-2xl mx-auto relative">
+                <input type="text" id="search-bar" placeholder="למשל: חלב, לחם, עגבניות..." class="w-full p-4 pr-12 border-2 border-gray-200 rounded-full focus:outline-none focus:border-orange-400 transition text-lg text-right">
+                <span class="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </span>
+            </div>
+        </section>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 secondary-text">קנייה לפי קטגוריה</h2>
+            <div id="category-filters" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-5"></div>
+        </section>
+        <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 hidden"></div>
+        <p id="no-results" class="text-center text-gray-500 hidden text-xl mt-8">🤷‍♂️ לא נמצאו מוצרים. נסה חיפוש אחר!</p>
+        <p id="select-category-prompt" class="text-center text-gray-500 text-xl mt-8">נא לבחור קטגוריה כדי להציג מוצרים.</p>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="secondary-bg text-white mt-16">
+        <div class="container mx-auto px-8 py-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-right">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">באדג'טיר</h3>
+                    <p class="text-gray-400">הדרך החכמה והמהירה לחסוך בקניות בסופרמרקט.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">קישורים שימושיים</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" id="footer-about-link" class="hover:text-orange-400 transition-colors">אודות</a></li>
+                        <!-- <li><a href="#" id="footer-privacy-link" class="hover:text-orange-400 transition-colors">מדיניות פרטיות</a></li> -->
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">
+                        <a href="https://your-website.com" class="hover:text-blue-400 transition-colors cursor-pointer">
+                            הצביעו לנו
+                        </a>
+                    </h3>
+                    <!-- <div class="flex justify-center md:justify-start gap-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35C.59 0 0 .59 0 1.325v21.35C0 23.41.59 24 1.325 24H12.82v-9.29H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116c.735 0 1.325-.59 1.325-1.325V1.325C24 .59 23.41 0 22.675 0z"/></svg></a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.012 3.584-.07 4.85c-.148 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.07-1.645-.07-4.85s.012-3.584.07-4.85c.148-3.225 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.85-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12s.014 3.667.072 4.948c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24s3.667-.014 4.948-.072c4.354-.2 6.782-2.618 6.979-6.98.059-1.281.073-1.689.073-4.948s-.014-3.667-.072-4.948c-.198-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.88 1.44 1.44 0 000-2.88z"/></svg></a>
+                    </div> -->
+                </div>  
+          </div>
+            <div class="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
+                <p>&copy; 2025 באדג'טיר. כל הזכויות שמורות.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Modals -->
+    <div id="login-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-2xl shadow-2xl p-8 w-full max-w-sm modal-enter relative"><button class="modal-close absolute top-4 left-4 text-gray-600 hover:secondary-text text-3xl font-bold">&times;</button><h2 class="text-3xl font-bold text-center mb-6 secondary-text">התחברות</h2><form id="login-form"><input type="email" id="login-email" placeholder="אימייל" class="w-full p-3 mb-4 border rounded-lg text-right" required><input type="password" id="login-password" placeholder="סיסמה" class="w-full p-3 mb-6 border rounded-lg text-right" required><button type="submit" class="w-full primary-bg text-white font-bold py-3 rounded-full hover:bg-orange-600 btn-hover">התחבר</button></form></div></div>
+    <div id="register-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-2xl shadow-2xl p-8 w-full max-w-sm modal-enter relative"><button class="modal-close absolute top-4 left-4 text-gray-600 hover:secondary-text text-3xl font-bold">&times;</button><h2 class="text-3xl font-bold text-center mb-6 secondary-text">הרשמה</h2><form id="register-form"><input type="email" id="register-email" placeholder="אימייל" class="w-full p-3 mb-4 border rounded-lg text-right" required><input type="password" id="register-password" placeholder="סיסמה (לפחות 6 תווים)" class="w-full p-3 mb-6 border rounded-lg text-right" required><button type="submit" class="w-full primary-bg text-white font-bold py-3 rounded-full hover:bg-orange-600 btn-hover">צור חשבון</button></form></div></div>
+    <div id="my-lists-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-2xl shadow-2xl p-8 w-full max-w-md modal-enter relative"><button class="modal-close absolute top-4 left-4 text-gray-600 hover:secondary-text text-3xl font-bold">&times;</button><h2 class="text-3xl font-bold text-center mb-6 secondary-text">הרשימות שלי</h2><div id="lists-container" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div><div class="mt-6"><input type="text" id="new-list-name" placeholder="שם רשימה חדשה..." class="w-full p-3 border rounded-lg text-right"><button id="add-new-list-btn" class="w-full primary-bg text-white font-bold py-3 rounded-full hover:bg-orange-600 btn-hover mt-3">צור רשימה חדשה</button></div></div></div>
+    <div id="about-us-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-2xl shadow-2xl p-8 w-full max-w-2xl modal-enter relative text-right"><button class="modal-close absolute top-4 left-4 text-gray-600 hover:secondary-text text-3xl font-bold">&times;</button><h2 class="text-3xl font-bold text-center mb-6 secondary-text">אודות באדג'טיר</h2><p class="mb-4 text-gray-700">באדג'טיר היא פלטפורמה חדשנית שנועדה לחולל מהפכה בחווית קניית המצרכים שלך. המשימה שלנו היא להעצים צרכנים על ידי מתן השוואות מחירים שקופות ובזמן אמת בין סופרמרקטים גדולים בישראל.</p><p class="mb-4 text-gray-700">בעולם המהיר של היום, זמן וכסף הם יקרי ערך. באדג'טיר חוסכת לך את שניהם. במקום לדפדף בין מספר אתרים או לבקר בחנויות שונות, הפלטפורמה שלנו מאגדת את כל המידע שאתה צריך במקום אחד נוח. בלחיצות ספורות, תוכל לבנות את עגלת הקניות שלך ולראות באופן מיידי היכן תוכל לרכוש אותה במחיר הנמוך ביותר.</p><p class="text-gray-700">אנו מחויבים לדיוק, פשטות, ובעיקר - לעזור לך לחסוך. הצטרף לקהילת הקונים החכמים שלנו והתחל למקסם את התקציב שלך עוד היום!</p></div></div>
+    <!-- <div id="privacy-policy-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-2xl shadow-2xl p-8 w-full max-w-2xl modal-enter relative text-right overflow-y-auto max-h-screen"><button class="modal-close absolute top-3 left-3 text-gray-400 hover:text-gray-600 text-3xl font-bold">&times;</button><h2 class="text-3xl font-bold text-center mb-6">מדיניות פרטיות</h2><h3 class="text-xl font-bold mt-4 mb-2">1. איסוף מידע</h3><p class="mb-4">אנו אוספים מידע אישי כגון שם וכתובת דוא"ל כאשר אתה נרשם לשירות שלנו. בעת שימוש באתר, אנו עשויים לאסוף נתונים על רשימות הקניות שלך והעדפותיך כדי לשפר את חווית המשתמש.</p><h3 class="text-xl font-bold mt-4 mb-2">2. שימוש במידע</h3><p class="mb-4">המידע שנאסף משמש להתאמה אישית של חווית המשתמש, שיפור השירות שלנו, ומתן תמיכה. איננו חולקים מידע אישי עם צדדים שלישיים ללא הסכמתך המפורשת, למעט במקרים הנדרשים על פי חוק.</p><h3 class="text-xl font-bold mt-4 mb-2">3. אבטחת מידע</h3><p class="mb-4">אנו נוקטים באמצעי אבטחה מתקדמים כדי להגן על המידע שלך. במצב הדגמה (offline), כל המידע נשמר אך ורק על הדפדפן המקומי שלך ואינו מועבר לשרתים חיצוניים.</p><h3 class="text-xl font-bold mt-4 mb-2">4. עוגיות (Cookies)</h3><p class="mb-4">אנו משתמשים בעוגיות כדי לשמור את פרטי ההתחברות שלך ולהתאים את חווית הגלישה. באפשרותך לחסום עוגיות דרך הגדרות הדפדפן, אך הדבר עלול לפגוע בפונקציונליות האתר.</p></div></div> -->
+    <div id="comparison-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-xl shadow-2xl p-6 md:p-8 w-full max-w-3xl modal-enter relative"><button class="modal-close absolute top-4 left-4 text-gray-600 hover:secondary-text text-3xl font-bold">&times;</button><div class="text-center mb-6"><h2 class="text-3xl font-bold secondary-text">תוצאות השוואה 📊</h2></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"><div id="comparison-content" class="space-y-4"></div><div class="mt-4 md:mt-0"><canvas id="price-chart"></canvas><button id="share-results-btn" class="w-full accent-bg text-white font-bold py-3 rounded-full hover:bg-teal-500 btn-hover mt-6">שתף תוצאות</button></div></div></div></div>
+    <div id="message-modal" class="modal fixed inset-0 items-center justify-center p-4 z-50"><div class="glass-effect rounded-lg shadow-2xl p-8 w-full max-w-sm modal-enter text-center"><p id="message-text" class="text-lg mb-6 secondary-text"></p><button id="message-ok-btn" class="primary-bg text-white font-bold py-2 px-8 rounded-full hover:bg-orange-600">אישור</button></div></div>
+    
+    <!-- Cart Sidebar -->
+    <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-full md:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-40 flex flex-col">
+        <div class="p-4 flex justify-between items-center border-b"><h2 class="text-2xl font-bold secondary-text">העגלה שלך 🛍️</h2><button id="close-cart" class="text-gray-500 hover:secondary-text"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+        <div id="cart-items" class="flex-grow p-4 overflow-y-auto"></div>
+        <div id="cart-empty-message" class="flex-grow flex flex-col items-center justify-center text-gray-500 p-4 text-center"><svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><p>העגלה שלך ריקה. בחר קטגוריה כדי להתחיל!</p></div>
+        <div class="p-4 border-t bg-gray-50"><button id="compare-prices-btn" class="w-full primary-bg text-white font-bold py-3 rounded-full hover:bg-orange-600 transition-colors duration-300 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed btn-hover">השווה מחירים</button></div>
+    </div>
+    <div id="cart-overlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- State Variables ---
+        let userId = null;
+        let allLists = {};
+        let activeListName = 'הרשימה הראשית';
+        let currentCategory = null; // Will be set in init()
+        let priceChartInstance = null;
+
+        // --- Data ---
+        const supermarkets = {
+            'shufersal': 'שופרסל דיל 🛒', 'ramiLevy': 'רמי לוי 🏬', 'yohananof': 'יוחננוף 💰'
+        };
+        const categories = [
+            { name: 'פירות וירקות', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 17.118a10.835 10.835 0 01-4.029-.933m4.029.933c1.378-.44 2.53-1.125 3.521-2.008m-3.521 2.008l-2.99-7.288m6.511 5.28A10.832 10.832 0 0018 10.25c0-2.39-1.03-4.63-2.73-6.25m-2.241 9.388c-1.382 1.352-3.238 2.25-5.269 2.459M3.5 10.25a10.832 10.832 0 012.73-6.25m10.54 0A10.836 10.836 0 0118 10.25h-4.52M6.23 4C7.93 2.37 10.17 1.25 12.56 1.25c2.392 0 4.634 1.12 6.335 2.75M6.23 4a10.831 10.831 0 00-2.73 6.25H8.02"/></svg>' },
+            { name: 'חלב וביצים', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 7.5C7.5 5.296 9.42 2 12 2s4.5 3.296 4.5 5.5c0 2.278-2.222 4.97-3.61 6.582a1.5 1.5 0 01-1.78 0C9.722 12.47 7.5 9.778 7.5 7.5z"/><path d="M2.5 21.5h19"/></svg>' },
+            { name: 'בשר ועופות', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21.488S2.667 15.112 2.667 9.778C2.667 4.444 6.89 1 12 1s9.333 3.444 9.333 8.778c0 5.334-9.333 11.71-9.333 11.71z"/><path d="M12 11.778c-1.84 0-3.333-1.716-3.333-3.834S10.16 4.11 12 4.11s3.333 1.715 3.333 3.833S13.84 11.778 12 11.778z"/></svg>' },
+            { name: 'מאפייה', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21.5 13.5c0 4.418-3.358 8-7.5 8s-7.5-3.582-7.5-8"/><path d="M2.5 13.5V10c0-4.142 3.358-7.5 7.5-7.5s7.5 3.358 7.5 7.5v3.5"/><path d="M10 8.5v-2m4 2v-2"/></svg>' },
+            { name: 'קפואים', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20m-5-15l10 10m-10 0l10-10m-5 5l-5-5m10 0l-5 5m0 5l-5-5m10 0l-5 5"/></svg>' },
+            { name: 'משקאות', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.5 21.5h7V10h-7v11.5zM12 2.5v3"/><path d="M9.5 5.5h5V10h-5V5.5z"/></svg>' },
+            { name: 'מזווה', icon: '<svg class="category-icon w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 21.5h13V6h-13v15.5z"/><path d="M8.5 10h7m-7 4h7m-7 4h7"/><path d="M21.5 6H15c0-1.933-1.567-3.5-3.5-3.5S8 4.067 8 6H2.5"/></svg>' }
+        ];
+        const products = [
+// const products = [
+  { id: 1, name: 'תפוח', category: 'פירות וירקות', emoji: '🍎', prices: { shufersal: 62.9, ramiLevy: 43.4, yohananof: 61.2 } },
+  { id: 2, name: 'בננה', category: 'פירות וירקות', emoji: '🍌', prices: { shufersal: 9.9, ramiLevy: 42.1, yohananof: 66.4 } },
+  { id: 3, name: 'עגבנייה', category: 'פירות וירקות', emoji: '🍅', prices: { shufersal: 39.9, ramiLevy: 90.2, yohananof: 114.7 } },
+  { id: 4, name: 'מלפפון', category: 'פירות וירקות', emoji: '🥒', prices: { shufersal: 14.6, ramiLevy: 4.9, yohananof: 71.2 } },
+  { id: 5, name: 'בצל', category: 'פירות וירקות', emoji: '🧅', prices: { shufersal: 37.3, ramiLevy: 61.7, yohananof: 41.8 } },
+  { id: 6, name: 'תפוח אדמה', category: 'פירות וירקות', emoji: '🥔', prices: { shufersal: 67.2, ramiLevy: 91.1, yohananof: 22.6 } },
+  { id: 7, name: 'חסה', category: 'פירות וירקות', emoji: '🥬', prices: { shufersal: 37.3, ramiLevy: 47.2, yohananof: 43.7 } },
+  { id: 8, name: 'פטרוזיליה', category: 'פירות וירקות', emoji: '🌿', prices: { shufersal: 92.8, ramiLevy: 119.1, yohananof: 87.3 } },
+  { id: 9, name: 'גזר', category: 'פירות וירקות', emoji: '🥕', prices: { shufersal: 26.9, ramiLevy: 66.1, yohananof: 85.6 } },
+  { id: 10, name: 'אבוקדו', category: 'פירות וירקות', emoji: '🥑', prices: { shufersal: 24.3, ramiLevy: 109.1, yohananof: 100.7 } },
+  { id: 11, name: 'חלב 1ל', category: 'חלב וביצים', emoji: '🥛', prices: { shufersal: 15.3, ramiLevy: 11.7, yohananof: 17.2 } },
+  { id: 12, name: 'ביצים (12)', category: 'חלב וביצים', emoji: '🥚', prices: { shufersal: 13.1, ramiLevy: 12.5, yohananof: 13.5 } },
+  { id: 13, name: 'קוטג\' 250ג', category: 'חלב וביצים', emoji: '🥣', prices: { shufersal: 7.8, ramiLevy: 8.5, yohananof: 7.9 } },
+  { id: 14, name: 'גבינה צהובה', category: 'חלב וביצים', emoji: '🧀', prices: { shufersal: 45.0, ramiLevy: 42.0, yohananof: 46.0 } },
+  { id: 15, name: 'יוגורט טבעי', category: 'חלב וביצים', emoji: '🍶', prices: { shufersal: 5.2, ramiLevy: 4.9, yohananof: 5.3 } },
+  { id: 16, name: 'שמנת מתוקה', category: 'חלב וביצים', emoji: '🥛', prices: { shufersal: 12.1, ramiLevy: 11.7, yohananof: 13.0 } },
+  { id: 17, name: 'חלב סויה', category: 'חלב וביצים', emoji: '🥛', prices: { shufersal: 9.5, ramiLevy: 8.9, yohananof: 9.2 } },
+  { id: 18, name: 'שוקו בשקית', category: 'חלב וביצים', emoji: '🥤', prices: { shufersal: 3.2, ramiLevy: 3.0, yohananof: 3.3 } },
+  { id: 19, name: 'לחם אחיד', category: 'מאפייה', emoji: '🍞', prices: { shufersal: 8.0, ramiLevy: 7.5, yohananof: 8.2 } },
+  { id: 20, name: 'בגט', category: 'מאפייה', emoji: '🥖', prices: { shufersal: 5.0, ramiLevy: 4.5, yohananof: 5.2 } },
+  { id: 21, name: 'פיתה', category: 'מאפייה', emoji: '🫓', prices: { shufersal: 6.0, ramiLevy: 5.5, yohananof: 6.1 } },
+  { id: 22, name: 'לחמנייה', category: 'מאפייה', emoji: '🥯', prices: { shufersal: 4.5, ramiLevy: 4.0, yohananof: 4.6 } },
+  { id: 23, name: 'חלה', category: 'מאפייה', emoji: '🍞', prices: { shufersal: 10.0, ramiLevy: 9.5, yohananof: 10.5 } },
+  { id: 24, name: 'קרואסון', category: 'מאפייה', emoji: '🥐', prices: { shufersal: 6.5, ramiLevy: 6.0, yohananof: 6.8 } },
+  { id: 25, name: 'עוגה אישית', category: 'מאפייה', emoji: '🍰', prices: { shufersal: 15.0, ramiLevy: 14.0, yohananof: 16.0 } },
+  { id: 26, name: 'חזה עוף (ק"ג)', category: 'בשר ועופות', emoji: '🍗', prices: { shufersal: 38.0, ramiLevy: 35.0, yohananof: 36.5 } },
+  { id: 27, name: 'פילה סלמון (ק"ג)', category: 'בשר ועופות', emoji: '🐟', prices: { shufersal: 99.0, ramiLevy: 95.0, yohananof: 105.0 } },
+  { id: 28, name: 'בשר טחון (ק"ג)', category: 'בשר ועופות', emoji: '🍔', prices: { shufersal: 55.0, ramiLevy: 52.0, yohananof: 58.0 } },
+  { id: 29, name: 'נקניק פסטרמה', category: 'בשר ועופות', emoji: '🥪', prices: { shufersal: 28.0, ramiLevy: 26.5, yohananof: 29.0 } },
+  { id: 30, name: 'סטייק אנטריקוט', category: 'בשר ועופות', emoji: '🥩', prices: { shufersal: 75.0, ramiLevy: 70.0, yohananof: 77.5 } },
+  { id: 31, name: 'כנפיים (ק"ג)', category: 'בשר ועופות', emoji: '🍗', prices: { shufersal: 24.0, ramiLevy: 22.5, yohananof: 25.0 } },
+  { id: 32, name: 'פיצה קפואה', category: 'קפואים', emoji: '🍕', prices: { shufersal: 35.0, ramiLevy: 32.0, yohananof: 36.0 } },
+  { id: 33, name: 'שניצל תירס קפוא', category: 'קפואים', emoji: '🧊', prices: { shufersal: 22.0, ramiLevy: 20.0, yohananof: 23.0 } },
+  { id: 34, name: 'פלאפל קפוא', category: 'קפואים', emoji: '🧆', prices: { shufersal: 18.0, ramiLevy: 16.0, yohananof: 18.5 } },
+  { id: 35, name: 'קובה קפוא', category: 'קפואים', emoji: '🥟', prices: { shufersal: 19.0, ramiLevy: 17.5, yohananof: 20.0 } },
+  { id: 36, name: 'ירקות קפואים', category: 'קפואים', emoji: '🥦', prices: { shufersal: 15.0, ramiLevy: 13.5, yohananof: 16.0 } },
+  { id: 37, name: 'מיץ תפוזים 1.5ל', category: 'משקאות', emoji: '🧃', prices: { shufersal: 14.0, ramiLevy: 13.2, yohananof: 14.5 } },
+  { id: 38, name: 'קולה', category: 'משקאות', emoji: '🥤', prices: { shufersal: 8.0, ramiLevy: 7.5, yohananof: 8.2 } },
+  { id: 39, name: 'מי עדן 6 בקבוקים', category: 'משקאות', emoji: '💧', prices: { shufersal: 18.0, ramiLevy: 16.5, yohananof: 17.5 } },
+  { id: 40, name: 'רד בול', category: 'משקאות', emoji: '🧃', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 12.5 } },
+  { id: 41, name: 'שוקו בבקבוק', category: 'משקאות', emoji: '🥤', prices: { shufersal: 6.0, ramiLevy: 5.5, yohananof: 6.3 } },
+  { id: 42, name: 'תה קר', category: 'משקאות', emoji: '🍹', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 7.2 } },
+  { id: 43, name: 'קורנפלקס', category: 'מזווה', emoji: '🥣', prices: { shufersal: 22.0, ramiLevy: 20.5, yohananof: 21.5 } },
+  { id: 44, name: 'פסטה', category: 'מזווה', emoji: '🍝', prices: { shufersal: 7.0, ramiLevy: 6.0, yohananof: 6.5 } },
+  { id: 45, name: 'קפה נמס', category: 'מזווה', emoji: '☕', prices: { shufersal: 34.0, ramiLevy: 31.5, yohananof: 35.0 } },
+  { id: 46, name: 'שמן קנולה', category: 'מזווה', emoji: '🛢️', prices: { shufersal: 9.0, ramiLevy: 8.0, yohananof: 8.5 } },
+  { id: 47, name: 'סוכר 1ק"ג', category: 'מזווה', emoji: '🍚', prices: { shufersal: 4.5, ramiLevy: 4.0, yohananof: 4.3 } },
+  { id: 48, name: 'מלח 1ק"ג', category: 'מזווה', emoji: '🧂', prices: { shufersal: 2.0, ramiLevy: 1.8, yohananof: 2.2 } },
+  { id: 49, name: 'אורז בסמטי 1ק"ג', category: 'מזווה', emoji: '🍚', prices: { shufersal: 9.5, ramiLevy: 8.8, yohananof: 9.2 } },
+  { id: 50, name: 'קוסקוס בינוני', category: 'מזווה', emoji: '🥘', prices: { shufersal: 7.8, ramiLevy: 7.0, yohananof: 7.5 } },
+  { id: 51, name: 'קטשופ היינץ', category: 'מזווה', emoji: '🍅', prices: { shufersal: 12.0, ramiLevy: 10.5, yohananof: 11.2 } },
+  { id: 52, name: 'מיונז הלמנז', category: 'מזווה', emoji: '🥫', prices: { shufersal: 11.0, ramiLevy: 10.0, yohananof: 10.8 } },
+  { id: 53, name: 'מרגרינה', category: 'מזווה', emoji: '🧈', prices: { shufersal: 4.5, ramiLevy: 4.2, yohananof: 4.6 } },
+  { id: 54, name: 'חטיף במבה', category: 'מזווה', emoji: '🥜', prices: { shufersal: 3.5, ramiLevy: 3.2, yohananof: 3.8 } },
+  { id: 55, name: 'טונה בשמן', category: 'מזווה', emoji: '🐟', prices: { shufersal: 6.0, ramiLevy: 5.5, yohananof: 6.3 } },
+  { id: 56, name: 'שוקולד פרה', category: 'מזווה', emoji: '🍫', prices: { shufersal: 6.5, ramiLevy: 6.0, yohananof: 6.8 } },
+  { id: 57, name: 'חיתולים פמפרס', category: 'טואלטיקה', emoji: '🧷', prices: { shufersal: 45.0, ramiLevy: 43.0, yohananof: 46.0 } },
+  { id: 58, name: 'מגבונים לחים', category: 'טואלטיקה', emoji: '🧻', prices: { shufersal: 9.0, ramiLevy: 8.2, yohananof: 8.5 } },
+  { id: 59, name: 'סבון נוזלי', category: 'טואלטיקה', emoji: '🧴', prices: { shufersal: 15.0, ramiLevy: 13.5, yohananof: 14.0 } },
+  { id: 60, name: 'שמפו', category: 'טואלטיקה', emoji: '🧴', prices: { shufersal: 22.0, ramiLevy: 20.0, yohananof: 21.5 } },
+  { id: 61, name: 'ג\'ל רחצה', category: 'טואלטיקה', emoji: '🛁', prices: { shufersal: 18.0, ramiLevy: 16.5, yohananof: 17.0 } },
+  { id: 62, name: 'מברשת שיניים', category: 'טואלטיקה', emoji: '🪥', prices: { shufersal: 8.0, ramiLevy: 7.5, yohananof: 7.8 } },
+  { id: 63, name: 'משחת שיניים', category: 'טואלטיקה', emoji: '🦷', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 64, name: 'רוטב סויה', category: 'מזווה', emoji: '🥢', prices: { shufersal: 9.0, ramiLevy: 8.5, yohananof: 9.2 } },
+  { id: 65, name: 'חומץ תפוחים', category: 'מזווה', emoji: '🍎', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 7.0 } },
+  { id: 66, name: 'שמן זית', category: 'מזווה', emoji: '🫒', prices: { shufersal: 30.0, ramiLevy: 28.0, yohananof: 29.5 } },
+  { id: 67, name: 'טחינה', category: 'מזווה', emoji: '🥣', prices: { shufersal: 18.0, ramiLevy: 16.0, yohananof: 17.5 } },
+  { id: 68, name: 'סלט שומר', category: 'פירות וירקות', emoji: '🥒', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 69, name: 'חומוס מוכן', category: 'מזווה', emoji: '🥙', prices: { shufersal: 10.0, ramiLevy: 9.0, yohananof: 9.5 } },
+  { id: 70, name: 'פסטה אטריות', category: 'מזווה', emoji: '🍝', prices: { shufersal: 7.5, ramiLevy: 6.8, yohananof: 7.0 } },
+  { id: 71, name: 'קפה טחון', category: 'מזווה', emoji: '☕', prices: { shufersal: 33.0, ramiLevy: 31.0, yohananof: 32.5 } },
+  { id: 72, name: 'תה עלים', category: 'מזווה', emoji: '🍵', prices: { shufersal: 20.0, ramiLevy: 18.0, yohananof: 19.5 } },
+  { id: 73, name: 'דבש', category: 'מזווה', emoji: '🍯', prices: { shufersal: 25.0, ramiLevy: 23.0, yohananof: 24.5 } },
+  { id: 74, name: 'ריבה', category: 'מזווה', emoji: '🍓', prices: { shufersal: 15.0, ramiLevy: 14.0, yohananof: 15.5 } },
+  { id: 75, name: 'שימורי ירקות', category: 'מזווה', emoji: '🥫', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 7.2 } },
+  { id: 76, name: 'פולי קפה', category: 'מזווה', emoji: '☕', prices: { shufersal: 40.0, ramiLevy: 37.0, yohananof: 39.0 } },
+  { id: 77, name: 'קמח לבן', category: 'מזווה', emoji: '🌾', prices: { shufersal: 6.0, ramiLevy: 5.5, yohananof: 6.2 } },
+  { id: 78, name: 'שמרים', category: 'מזווה', emoji: '🧫', prices: { shufersal: 3.5, ramiLevy: 3.0, yohananof: 3.8 } },
+  { id: 79, name: 'אבקת אפייה', category: 'מזווה', emoji: '🥄', prices: { shufersal: 4.0, ramiLevy: 3.5, yohananof: 4.2 } },
+  { id: 80, name: 'שוקולד מריר', category: 'מזווה', emoji: '🍫', prices: { shufersal: 15.0, ramiLevy: 14.0, yohananof: 15.5 } },
+  { id: 81, name: 'שוקולד חלב', category: 'מזווה', emoji: '🍫', prices: { shufersal: 14.0, ramiLevy: 13.0, yohananof: 14.5 } },
+  { id: 82, name: 'סוכריות גומי', category: 'מזווה', emoji: '🍬', prices: { shufersal: 10.0, ramiLevy: 9.5, yohananof: 10.5 } },
+  { id: 83, name: 'צימוקים', category: 'מזווה', emoji: '🍇', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 84, name: 'אגוזים מעורבים', category: 'מזווה', emoji: '🥜', prices: { shufersal: 40.0, ramiLevy: 38.0, yohananof: 39.5 } },
+  { id: 85, name: 'פיצוחים', category: 'מזווה', emoji: '🌰', prices: { shufersal: 35.0, ramiLevy: 33.0, yohananof: 34.5 } },
+  { id: 86, name: 'חטיפי אנרגיה', category: 'מזווה', emoji: '🍫', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 12.5 } },
+  { id: 87, name: 'סוכר חום', category: 'מזווה', emoji: '🍬', prices: { shufersal: 5.0, ramiLevy: 4.5, yohananof: 5.2 } },
+  { id: 88, name: 'תה שחור', category: 'מזווה', emoji: '🍵', prices: { shufersal: 18.0, ramiLevy: 17.0, yohananof: 18.5 } },
+  { id: 89, name: 'תה ירוק', category: 'מזווה', emoji: '🍵', prices: { shufersal: 20.0, ramiLevy: 19.0, yohananof: 20.5 } },
+  { id: 90, name: 'טחינה גולמית', category: 'מזווה', emoji: '🥣', prices: { shufersal: 22.0, ramiLevy: 21.0, yohananof: 22.5 } },
+  { id: 91, name: 'שמן חמניות', category: 'מזווה', emoji: '🛢️', prices: { shufersal: 16.0, ramiLevy: 15.0, yohananof: 16.5 } },
+  { id: 92, name: 'חלבון אבקה', category: 'מזווה', emoji: '🥤', prices: { shufersal: 150.0, ramiLevy: 140.0, yohananof: 145.0 } },
+  { id: 93, name: 'מיץ ענבים', category: 'משקאות', emoji: '🍇', prices: { shufersal: 14.0, ramiLevy: 13.0, yohananof: 14.5 } },
+  { id: 94, name: 'מים מינרליים', category: 'משקאות', emoji: '💧', prices: { shufersal: 8.0, ramiLevy: 7.5, yohananof: 8.2 } },
+  { id: 95, name: 'יין אדום', category: 'משקאות', emoji: '🍷', prices: { shufersal: 60.0, ramiLevy: 55.0, yohananof: 58.0 } },
+  { id: 96, name: 'בירה', category: 'משקאות', emoji: '🍺', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 12.5 } },
+  { id: 97, name: 'שמן קנולה', category: 'מזווה', emoji: '🛢️', prices: { shufersal: 9.0, ramiLevy: 8.0, yohananof: 8.5 } },
+  { id: 99, name: 'טחינה רגילה', category: 'מזווה', emoji: '🥣', prices: { shufersal: 18.0, ramiLevy: 16.0, yohananof: 17.5 } },
+  { id: 100, name: 'סודה לשתייה', category: 'מזווה', emoji: '🥤', prices: { shufersal: 5.0, ramiLevy: 4.5, yohananof: 5.2 } },
+{ id: 201, name: 'כרובית (ק"ג)', category: 'פירות וירקות', emoji: '🥦', prices: { shufersal: 10.5, ramiLevy: 9.8, yohananof: 10.0 } },
+  { id: 202, name: 'תפוזים (ק"ג)', category: 'פירות וירקות', emoji: '🍊', prices: { shufersal: 9.5, ramiLevy: 8.9, yohananof: 9.2 } },
+  { id: 203, name: 'סלרי (ק"ג)', category: 'פירות וירקות', emoji: '🥬', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 6.8 } },
+  { id: 204, name: 'אספרגוס (ק"ג)', category: 'פירות וירקות', emoji: '🥦', prices: { shufersal: 25.0, ramiLevy: 23.0, yohananof: 24.0 } },
+  { id: 205, name: 'פטל (ק"ג)', category: 'פירות וירקות', emoji: '🍓', prices: { shufersal: 40.0, ramiLevy: 38.0, yohananof: 39.0 } },
+  { id: 206, name: 'קיווי (ק"ג)', category: 'פירות וירקות', emoji: '🥝', prices: { shufersal: 18.0, ramiLevy: 16.5, yohananof: 17.0 } },
+  { id: 207, name: 'אבטיח (ק"ג)', category: 'פירות וירקות', emoji: '🍉', prices: { shufersal: 5.5, ramiLevy: 5.0, yohananof: 5.2 } },
+  { id: 208, name: 'אננס (ק"ג)', category: 'פירות וירקות', emoji: '🍍', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 209, name: 'חציל (ק"ג)', category: 'פירות וירקות', emoji: '🍆', prices: { shufersal: 7.5, ramiLevy: 7.0, yohananof: 7.2 } },
+  { id: 210, name: 'קישוא (ק"ג)', category: 'פירות וירקות', emoji: '🥒', prices: { shufersal: 6.8, ramiLevy: 6.2, yohananof: 6.5 } },
+  { id: 211, name: 'ברוקולי (ק"ג)', category: 'פירות וירקות', emoji: '🥦', prices: { shufersal: 12.5, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 212, name: 'אגס (ק"ג)', category: 'פירות וירקות', emoji: '🍐', prices: { shufersal: 11.0, ramiLevy: 10.5, yohananof: 10.8 } },
+  { id: 213, name: 'קפה פילטר 250 גרם', category: 'מזווה', emoji: '☕', prices: { shufersal: 27.0, ramiLevy: 25.5, yohananof: 26.0 } },
+  { id: 214, name: 'עגבניות שרי שקית 250 גרם', category: 'פירות וירקות', emoji: '🍅', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 215, name: 'קרח שקית 1 ק"ג', category: 'קפואים', emoji: '❄️', prices: { shufersal: 5.0, ramiLevy: 4.5, yohananof: 4.8 } },
+  { id: 216, name: 'טחינה 500 גרם', category: 'מזווה', emoji: '🥣', prices: { shufersal: 24.0, ramiLevy: 22.0, yohananof: 23.0 } },
+  { id: 217, name: 'מיץ גזר 1 ליטר', category: 'משקאות', emoji: '🥕', prices: { shufersal: 13.0, ramiLevy: 12.0, yohananof: 12.5 } },
+  { id: 218, name: 'קרקרים 250 גרם', category: 'מזווה', emoji: '🍘', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 6.8 } },
+  { id: 219, name: 'שימורי שימשום 400 גרם', category: 'מזווה', emoji: '🥫', prices: { shufersal: 9.0, ramiLevy: 8.5, yohananof: 8.7 } },
+  { id: 220, name: 'פפריקה 50 גרם', category: 'מזווה', emoji: '🌶️', prices: { shufersal: 10.0, ramiLevy: 9.0, yohananof: 9.5 } },
+  { id: 221, name: 'קינמון 50 גרם', category: 'מזווה', emoji: '🧂', prices: { shufersal: 9.0, ramiLevy: 8.5, yohananof: 8.7 } },
+  { id: 222, name: 'אבוקדו (ק"ג)', category: 'פירות וירקות', emoji: '🥑', prices: { shufersal: 20.0, ramiLevy: 18.0, yohananof: 19.0 } },
+  { id: 223, name: 'מלפפון חמוץ 500 גרם', category: 'מזווה', emoji: '🥒', prices: { shufersal: 11.0, ramiLevy: 10.0, yohananof: 10.5 } },
+  { id: 224, name: 'שוקולד מריר 100 גרם', category: 'מזווה', emoji: '🍫', prices: { shufersal: 8.0, ramiLevy: 7.5, yohananof: 7.8 } },
+  { id: 225, name: 'חומוס (ק"ג)', category: 'מזווה', emoji: '🥙', prices: { shufersal: 10.0, ramiLevy: 9.0, yohananof: 9.5 } },
+  { id: 226, name: 'פולי קפה ירוק 1 ק"ג', category: 'מזווה', emoji: '☕', prices: { shufersal: 65.0, ramiLevy: 60.0, yohananof: 62.0 } },
+  { id: 227, name: 'שמנת לבישול 500 מ"ל', category: 'חלב וביצים', emoji: '🥛', prices: { shufersal: 15.0, ramiLevy: 14.0, yohananof: 14.5 } },
+  { id: 228, name: 'גבינת מוצרלה 250 גרם', category: 'חלב וביצים', emoji: '🧀', prices: { shufersal: 20.0, ramiLevy: 19.0, yohananof: 19.5 } },
+  { id: 229, name: 'בייגל', category: 'מאפייה', emoji: '🥯', prices: { shufersal: 6.5, ramiLevy: 6.0, yohananof: 6.3 } },
+  { id: 230, name: 'משחת שיניים 100 מ"ל', category: 'טואלטיקה', emoji: '🪥', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 231, name: 'סבון ידיים 250 מ"ל', category: 'טואלטיקה', emoji: '🧼', prices: { shufersal: 10.0, ramiLevy: 9.0, yohananof: 9.5 } },
+  { id: 232, name: 'קרם לחות פנים 50 מ"ל', category: 'טואלטיקה', emoji: '🧴', prices: { shufersal: 40.0, ramiLevy: 38.0, yohananof: 39.0 } },
+  { id: 233, name: 'שמפו 400 מ"ל', category: 'טואלטיקה', emoji: '🧴', prices: { shufersal: 30.0, ramiLevy: 28.0, yohananof: 29.0 } },
+  { id: 234, name: 'קונדישנר 400 מ"ל', category: 'טואלטיקה', emoji: '🧴', prices: { shufersal: 28.0, ramiLevy: 26.0, yohananof: 27.0 } },
+  { id: 235, name: 'רוטב סויה 250 מ"ל', category: 'מזווה', emoji: '🥫', prices: { shufersal: 9.0, ramiLevy: 8.5, yohananof: 8.7 } },
+  { id: 236, name: 'רוטב עגבניות 500 מ"ל', category: 'מזווה', emoji: '🍅', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 6.8 } },
+  { id: 237, name: 'גרנולה 300 גרם', category: 'מזווה', emoji: '🥣', prices: { shufersal: 20.0, ramiLevy: 18.0, yohananof: 19.0 } },
+  { id: 238, name: 'שימורי תירס 400 גרם', category: 'מזווה', emoji: '🌽', prices: { shufersal: 7.0, ramiLevy: 6.5, yohananof: 6.8 } },
+  { id: 239, name: 'חלב קוקוס 400 מ"ל', category: 'חלב וביצים', emoji: '🥥', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 240, name: 'דגני בוקר שוקולד 300 גרם', category: 'מזווה', emoji: '🥣', prices: { shufersal: 18.0, ramiLevy: 16.5, yohananof: 17.0 } },
+  { id: 241, name: 'קרם קוקוס 200 מ"ל', category: 'חלב וביצים', emoji: '🥥', prices: { shufersal: 10.0, ramiLevy: 9.0, yohananof: 9.5 } },
+  { id: 242, name: 'פפריקה מתוקה 50 גרם', category: 'מזווה', emoji: '🌶️', prices: { shufersal: 8.0, ramiLevy: 7.5, yohananof: 7.8 } },
+  { id: 243, name: 'אגוזי מלך 200 גרם', category: 'מזווה', emoji: '🌰', prices: { shufersal: 45.0, ramiLevy: 43.0, yohananof: 44.0 } },
+  { id: 244, name: 'פפריקה חריפה 50 גרם', category: 'מזווה', emoji: '🌶️', prices: { shufersal: 9.0, ramiLevy: 8.5, yohananof: 8.7 } },
+  { id: 245, name: 'מלפפון חמוץ (ק"ג)', category: 'מזווה', emoji: '🥒', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 } },
+  { id: 246, name: 'קפה נמס 100 גרם', category: 'מזווה', emoji: '☕', prices: { shufersal: 18.0, ramiLevy: 17.0, yohananof: 17.5 } },
+  { id: 247, name: 'קינמון טחון 50 גרם', category: 'מזווה', emoji: '🧂', prices: { shufersal: 10.0, ramiLevy: 9.5, yohananof: 9.7 } },
+  { id: 248, name: 'פטריות שמפיניון (ק"ג)', category: 'פירות וירקות', emoji: '🍄', prices: { shufersal: 25.0, ramiLevy: 23.0, yohananof: 24.0 } },
+  { id: 249, name: 'רוטב צילי מתוק 250 מל', category: 'מזווה', emoji: '🌶️', prices: { shufersal: 12.0, ramiLevy: 11.0, yohananof: 11.5 }},
+  { id: 250, name: 'פיצה טרייה', category: 'מאפייה', emoji: '🍕', prices: { shufersal: 35.0, ramiLevy: 33.0, yohananof: 34.0 } }
+]
+
+
+
+        const get = (id) => document.getElementById(id);
+
+        // --- All functions are defined here before they are called ---
+
+        function showModal(modal) { modal.classList.add('flex'); }
+        function hideModals() {
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('flex'));
+        }
+
+        function showMessage(message) {
+            get('message-text').textContent = message;
+            showModal(get('message-modal'));
+        }
+
+        function updateUIForAuthState(user) {
+            const authLinks = get('auth-links');
+            const userInfo = get('user-info');
+            const userEmailSpan = get('user-email');
+            if (user) {
+                authLinks.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+            } else {
+                authLinks.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                userEmailSpan.textContent = '';
+            }
+        }
+
+        function renderProducts() {
+ const productGrid = get('product-grid');
+ const selectCategoryPrompt = get('select-category-prompt');
+const noResults = get('no-results');
+ const searchTerm = get('search-bar').value.toLowerCase();
+
+ let productsToShow;
+
+ // If there is a search term, always filter ALL products. This is the main fix.
+ if (searchTerm) {
+productsToShow = products.filter(p => p.name.toLowerCase().includes(searchTerm));
+} else if (currentCategory) {
+ // If there's NO search term, but a category is selected, show products from that category.
+productsToShow = products.filter(p => p.category === currentCategory);
+ } else {
+ productsToShow = [];
+ }
+
+ const isSearching = searchTerm.length > 0;
+
+// Show the "select category" prompt only at the start.
+ selectCategoryPrompt.classList.toggle('hidden', isSearching || !!currentCategory);
+
+// Show the product grid only if we have items to display.
+productGrid.classList.toggle('hidden', productsToShow.length === 0);
+
+ // Show "no results" only when a search is active and yields 0 results.
+ noResults.classList.toggle('hidden', productsToShow.length > 0 || !isSearching);
+
+ // --- Render the filtered products ---
+ productGrid.innerHTML = '';
+productsToShow.forEach(product => {
+ const card = document.createElement('div');
+ card.className = 'bg-white rounded-2xl shadow-md p-4 flex flex-col justify-between hover:shadow-xl transition-shadow duration-300 item-enter';
+ card.innerHTML = `
+ <div>
+<div class="text-6xl text-center mb-4">${product.emoji}</div>
+ <h3 class="text-xl font-bold text-center secondary-text">${product.name}</h3>
+ </div>
+ <button data-id="${product.id}" class="add-to-cart-btn mt-4 w-full primary-bg text-white font-semibold py-2 rounded-full hover:bg-orange-600 btn-hover">הוסף לעגלה</button>
+ `;
+ productGrid.appendChild(card);
+ });
+ }
+
+        function renderCategories() {
+            const categoryFilters = get('category-filters');
+            categoryFilters.innerHTML = '';
+            categories.forEach(cat => {
+                const card = document.createElement('div');
+                card.dataset.category = cat.name;
+                const isActive = cat.name === currentCategory;
+                card.className = `category-card cursor-pointer p-4 rounded-2xl text-center soft-shadow transition-all duration-300 ${isActive ? 'primary-bg text-white' : 'bg-white'}`;
+                card.innerHTML = `<div class="flex justify-center items-center mb-2 text-gray-700 ${isActive ? 'text-white' : 'primary-text'}">${cat.icon}</div><span class="font-semibold">${cat.name.split(' ')[0]}</span>`;
+                categoryFilters.appendChild(card);
+            });
+        }
+
+        function renderCategories() {
+            const categoryFilters = get('category-filters');
+            categoryFilters.innerHTML = '';
+            categories.forEach(cat => {
+                const card = document.createElement('div');
+                card.dataset.category = cat.name;
+                const isActive = cat.name === currentCategory;
+                card.className = `category-card cursor-pointer p-4 rounded-2xl text-center soft-shadow transition-all duration-300 ${isActive ? 'primary-bg text-white' : 'bg-white'}`;
+                card.innerHTML = `<div class="flex justify-center items-center mb-2 text-gray-700 ${isActive ? 'text-white' : 'primary-text'}">${cat.icon}</div><span class="font-semibold">${cat.name.split(' ')[0]}</span>`;
+                categoryFilters.appendChild(card);
+            });
+        }
+
+        function renderCart() {
+            const cartItemsContainer = get('cart-items');
+            const cartEmptyMessage = get('cart-empty-message');
+            const comparePricesBtn = get('compare-prices-btn');
+            const cartCount = get('cart-count');
+
+            const currentCart = allLists[activeListName] || [];
+            cartItemsContainer.innerHTML = '';
+            cartEmptyMessage.classList.toggle('hidden', currentCart.length > 0);
+            cartItemsContainer.classList.toggle('hidden', currentCart.length === 0);
+            comparePricesBtn.disabled = currentCart.length === 0;
+
+            currentCart.forEach(item => {
+                const itemEl = document.createElement('div');
+                const itemId = item.id;
+                itemEl.className = 'flex items-center justify-between py-3 border-b border-gray-200';
+                itemEl.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="text-3xl">${item.emoji}</div>
+                        <div>
+                            <p class="font-semibold secondary-text">${item.name}</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <button data-id="${itemId}" class="decrease-qty bg-gray-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-lg hover:bg-gray-300">-</button>
+                                <span class="font-bold w-8 text-center secondary-text">${item.quantity}</span>
+                                <button data-id="${itemId}" class="increase-qty bg-gray-200 rounded-full w-7 h-7 flex items-center justify-center font-bold text-lg hover:bg-gray-300">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button data-id="${itemId}" class="remove-from-cart text-red-500 hover:text-red-700">
+                           <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                    </button>`;
+                cartItemsContainer.appendChild(itemEl);
+            });
+            const totalItems = currentCart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCount.textContent = totalItems;
+            cartCount.classList.toggle('hidden', totalItems === 0);
+        }
+
+        function addToCart(productId) {
+            if (!userId) { return showMessage("יש להתחבר כדי להוסיף פריטים לעגלה."); }
+            const currentCart = allLists[activeListName] || [];
+            const existingItem = currentCart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                const product = products.find(p => p.id === productId);
+                currentCart.push({ ...product, quantity: 1 });
+            }
+            allLists[activeListName] = currentCart;
+            localStorage.setItem('shoppingLists', JSON.stringify(allLists));
+            renderCart();
+            get('cart-button').classList.add('shake');
+            setTimeout(() => get('cart-button').classList.remove('shake'), 500);
+        }
+
+        function changeQuantity(itemId, amount) {
+            const currentCart = allLists[activeListName] || [];
+            const itemIndex = currentCart.findIndex(item => item.id === itemId);
+            if (itemIndex > -1) {
+                currentCart[itemIndex].quantity += amount;
+                if (currentCart[itemIndex].quantity <= 0) {
+                    currentCart.splice(itemIndex, 1);
+                }
+                allLists[activeListName] = currentCart;
+                localStorage.setItem('shoppingLists', JSON.stringify(allLists));
+                renderCart();
+            }
+        }
+
+        function removeFromCart(itemId) {
+            let currentCart = allLists[activeListName] || [];
+            currentCart = currentCart.filter(item => item.id !== itemId);
+            allLists[activeListName] = currentCart;
+            localStorage.setItem('shoppingLists', JSON.stringify(allLists));
+            renderCart();
+        }
+
+        function comparePrices() {
+            const currentCart = allLists[activeListName] || [];
+            const results = {};
+            for (const marketId in supermarkets) {
+                results[marketId] = { name: supermarkets[marketId], total: 0, items: [] };
+            }
+            currentCart.forEach(cartItem => {
+                for (const marketId in supermarkets) {
+                    const price = cartItem.prices[marketId] || 0;
+                    const itemTotal = price * cartItem.quantity;
+                    results[marketId].total += itemTotal;
+                }
+            });
+            const sortedResults = Object.values(results).sort((a, b) => a.total - b.total);
+            displayComparisonResults(sortedResults);
+        }
+
+        function displayComparisonResults(results) {
+            const comparisonContent = get('comparison-content');
+            comparisonContent.innerHTML = '';
+            const cheapestTotal = results[0].total;
+
+            results.forEach((result, index) => {
+                const isCheapest = index === 0;
+                let savingsText = '';
+                if (!isCheapest && cheapestTotal > 0) {
+                    const difference = result.total - cheapestTotal;
+                    const percentage = (difference / cheapestTotal) * 100;
+                    savingsText = `<span class="text-sm font-bold text-red-500 mr-2">(+₪${difference.toFixed(2)} / +${percentage.toFixed(0)}%)</span>`;
+                }
+
+                const resultEl = document.createElement('div');
+                resultEl.className = `p-4 rounded-lg border-2 ${isCheapest ? 'primary-border bg-orange-50' : 'border-gray-200 bg-white'}`;
+
+                resultEl.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-xl font-bold secondary-text">${result.name}</h3>
+                            ${isCheapest ? `<span class="text-xs font-bold primary-text">הזול ביותר!</span>` : ''}
+                        </div>
+                        <div class="text-2xl font-bold ${isCheapest ? 'primary-text' : 'secondary-text'}">
+                            ₪${result.total.toFixed(2)} ${savingsText}
+                        </div>
+                    </div>
+                `;
+                comparisonContent.appendChild(resultEl);
+            });
+
+            // Chart
+            const ctx = get('price-chart').getContext('2d');
+            if (priceChartInstance) {
+                priceChartInstance.destroy();
+            }
+            priceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: results.map(r => r.name.split(' ')[0]),
+                    datasets: [{
+                        label: 'מחיר סל קניות',
+                        data: results.map(r => r.total.toFixed(2)),
+                        backgroundColor: results.map((_, i) => i === 0 ? '#ff6b35' : '#0D2F4B'),
+                        borderColor: results.map((_, i) => i === 0 ? '#ff6b35' : '#0D2F4B'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ₪${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: value => `₪${value}` } }
+                    }
+                }
+            });
+            showModal(get('comparison-modal'));
+        }
+
+        function renderLists() {
+            const listsContainer = get('lists-container');
+            listsContainer.innerHTML = '';
+            for (const listName in allLists) {
+                const listEl = document.createElement('div');
+                listEl.className = `flex items-center justify-between p-3 rounded-lg cursor-pointer transition ${listName === activeListName ? 'bg-blue-100' : 'bg-gray-100'} hover:bg-gray-200`;
+                listEl.innerHTML = `
+                    <span class="font-semibold text-gray-700">${listName} (${allLists[listName].length} פריטים)</span>
+                    <div>
+                        <button data-list-name="${listName}" class="activate-list-btn text-blue-500 hover:text-blue-700 ml-2">בחר</button>
+                        <button data-list-name="${listName}" class="delete-list-btn text-red-500 hover:text-red-700">מחק</button>
+                    </div>
+                `;
+                listsContainer.appendChild(listEl);
+            }
+            if (Object.keys(allLists).length === 0) {
+                listsContainer.innerHTML = '<p class="text-center text-gray-500">אין לך רשימות. צור אחת!</p>';
+            }
+        }
+
+        function activateList(listName) {
+            activeListName = listName;
+            localStorage.setItem('activeListName', activeListName);
+            hideModals();
+            renderCart();
+            renderLists(); // Update list UI to show active state
+            showMessage(`הרשימה '${listName}' נבחרה.`);
+        }
+
+        function deleteList(listName) {
+            if (listName === 'הרשימה הראשית') {
+                showMessage('לא ניתן למחוק את הרשימה הראשית.');
+                return;
+            }
+            if (confirm(`האם אתה בטוח שברצונך למחוק את הרשימה '${listName}'?`)) {
+                delete allLists[listName];
+                if (activeListName === listName) {
+                    activeListName = 'הרשימה הראשית';
+                    localStorage.setItem('activeListName', activeListName);
+                }
+                localStorage.setItem('shoppingLists', JSON.stringify(allLists));
+                renderLists();
+                renderCart(); // Update cart in case active list was deleted
+                showMessage(`הרשימה '${listName}' נמחקה.`);
+            }
+        }
+
+        // --- Event Listeners Setup ---
+        function setupListeners() {
+            // Header buttons
+            get('login-btn').addEventListener('click', () => showModal(get('login-modal')));
+            get('register-btn').addEventListener('click', () => showModal(get('register-modal')));
+            get('logout-btn').addEventListener('click', () => {
+                userId = null;
+                allLists = {}; // Clear lists on logout
+                activeListName = 'הרשימה הראשית'; // Reset active list
+                localStorage.clear(); // Clear all local storage related to user/lists
+                updateUIForAuthState(null);
+                renderCart();
+                showMessage("התנתקת בהצלחה.");
+            });
+            get('cart-button').addEventListener('click', () => {
+                get('cart-sidebar').classList.remove('translate-x-full');
+                get('cart-overlay').classList.remove('hidden');
+            });
+            get('close-cart').addEventListener('click', () => {
+                get('cart-sidebar').classList.add('translate-x-full');
+                get('cart-overlay').classList.add('hidden');
+            });
+            get('cart-overlay').addEventListener('click', () => {
+                get('cart-sidebar').classList.add('translate-x-full');
+                get('cart-overlay').classList.add('hidden');
+            });
+
+            // Navigation links
+            get('my-lists-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!userId) { return showMessage("יש להתחבר כדי לגשת לרשימות שלך."); }
+                renderLists();
+                showModal(get('my-lists-modal'));
+            });
+            get('about-us-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                showModal(get('about-us-modal'));
+            });
+            // get('contact-us-link').addEventListener('click', (e) => {
+            //     e.preventDefault();
+            //     showMessage("לשאלות ופניות, אנא צור קשר בכתובת support@budgeteer.com");
+            // });
+            get('footer-about-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                hideModals();
+                showModal(get('about-us-modal'));
+            });
+            // get('footer-privacy-link').addEventListener('click', (e) => {
+            //     e.preventDefault();
+            //     hideModals();
+            //     showModal(get('privacy-policy-modal'));
+            // });
+
+            // Modal close buttons
+            document.querySelectorAll('.modal-close').forEach(button => {
+                button.addEventListener('click', hideModals);
+            });
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) hideModals();
+                });
+            });
+            get('message-ok-btn').addEventListener('click', hideModals);
+
+
+            // Forms
+            get('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = get('login-email').value;
+                const password = get('login-password').value;
+                // In a real app, send to server for auth
+                if (email && password) { // Basic client-side check
+                    userId = email; // Using email as a mock user ID
+                    const storedLists = localStorage.getItem('shoppingLists');
+                    allLists = storedLists ? JSON.parse(storedLists) : { 'הרשימה הראשית': [] };
+                    const storedActiveList = localStorage.getItem('activeListName');
+                    activeListName = storedActiveList && allLists[storedActiveList] ? storedActiveList : 'הרשימה הראשית';
+
+                    hideModals();
+                    updateUIForAuthState({ email });
+                    renderCart();
+                    showMessage(`ברוך הבא בחזרה, ${email.split('@')[0]}!`);
+                } else {
+                    showMessage("אנא הזן אימייל וסיסמה.");
+                }
+            });
+
+            get('register-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = get('register-email').value;
+                const password = get('register-password').value;
+                if (email && password.length >= 6) { // Basic validation
+                    // In a real app, send to server for registration
+                    userId = email; // Mock user ID
+                    allLists = { 'הרשימה הראשית': [] }; // Initialize with a default list
+                    activeListName = 'הרשימה הראשית';
+                    localStorage.setItem('shoppingLists', JSON.stringify(allLists));
+                    localStorage.setItem('activeListName', activeListName);
+
+                    hideModals();
+                    updateUIForAuthState({ email });
+                    renderCart();
+                    showMessage(`חשבונך נוצר בהצלחה, ${email.split('@')[0]}!`);
+                } else {
+                    showMessage("אנא ודא שהאימייל תקין והסיסמה לפחות 6 תווים.");
+                }
+            });
+
+            // Search bar
+            get('search-bar').addEventListener('input', renderProducts);
+
+            // Category filters
+            get('category-filters').addEventListener('click', (e) => {
+                const categoryCard = e.target.closest('.category-card');
+                if (categoryCard) {
+                    currentCategory = categoryCard.dataset.category;
+                    renderCategories(); // Re-render to highlight active category
+                    renderProducts();
+                }
+            });
+
+            // Product grid (add to cart)
+            get('product-grid').addEventListener('click', (e) => {
+                const addToCartBtn = e.target.closest('.add-to-cart-btn');
+                if (addToCartBtn) {
+                    const productId = parseInt(addToCartBtn.dataset.id);
+                    addToCart(productId);
+                }
+            });
+
+            // Cart actions
+            get('cart-items').addEventListener('click', (e) => {
+                const decreaseBtn = e.target.closest('.decrease-qty');
+                const increaseBtn = e.target.closest('.increase-qty');
+                const removeBtn = e.target.closest('.remove-from-cart');
+
+                if (decreaseBtn) {
+                    changeQuantity(parseInt(decreaseBtn.dataset.id), -1);
+                } else if (increaseBtn) {
+                    changeQuantity(parseInt(increaseBtn.dataset.id), 1);
+                } else if (removeBtn) {
+                    removeFromCart(parseInt(removeBtn.dataset.id));
+                }
+            });
+
+            get('compare-prices-btn').addEventListener('click', comparePrices);
+            get('share-results-btn').addEventListener('click', () => {
+                // Placeholder for share functionality
+                showMessage("פונקציית השיתוף תתווסף בקרוב!");
+            });
+
+            // My Lists modal actions
+            get('add-new-list-btn').addEventListener('click', () => {
+                const newListInput = get('new-list-name');
+                const newListName = newListInput.value.trim();
+                if (newListName && !allLists[newListName]) {
+                    allLists[newListName] = [];
+                    localStorage.setItem('shoppingLists', JSON.stringify(allLists));
+                    newListInput.value = '';
+                    renderLists();
+                    showMessage(`הרשימה '${newListName}' נוצרה.`);
+                } else if (allLists[newListName]) {
+                    showMessage('רשימה בשם זה כבר קיימת.');
+                } else {
+                    showMessage('יש להזין שם עבור הרשימה החדשה.');
+                }
+            });
+
+            get('lists-container').addEventListener('click', (e) => {
+                const activateBtn = e.target.closest('.activate-list-btn');
+                const deleteBtn = e.target.closest('.delete-list-btn');
+
+                if (activateBtn) {
+                    activateList(activateBtn.dataset.listName);
+                } else if (deleteBtn) {
+                    deleteList(deleteBtn.dataset.listName);
+                }
+            });
+        } // End of setupListeners function
+
+        // --- Initializations ---
+        function init() {
+            // Load state from localStorage
+            const storedUserId = localStorage.getItem('userId');
+            if (storedUserId) {
+                userId = storedUserId;
+                const storedLists = localStorage.getItem('shoppingLists');
+                allLists = storedLists ? JSON.parse(storedLists) : { 'הרשימה הראשית': [] };
+                const storedActiveList = localStorage.getItem('activeListName');
+                activeListName = storedActiveList && allLists[storedActiveList] ? storedActiveList : 'הרשימה הראשית';
+                updateUIForAuthState({ email: userId }); // Assuming userId is the email
+            } else {
+                allLists = { 'הרשימה הראשית': [] }; // Initialize if no user and no lists
+                activeListName = 'הרשימה הראשית';
+            }
+
+            // Set a default category on load if none is currently selected
+            if (categories.length > 0 && currentCategory === null) {
+                currentCategory = categories[0].name; // Set to the first category
+            }
+
+            renderCategories();
+            renderProducts();
+            renderCart();
+            setupListeners(); // Call setupListeners after all elements are guaranteed to be in DOM and `get` is defined.
+        }
+
+        init(); // Call the init function when DOM is ready
+    });
+</script>
+</body>
+</html>
